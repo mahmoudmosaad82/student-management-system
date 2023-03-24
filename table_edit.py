@@ -1,5 +1,5 @@
-
 import tkinter as tk
+from tkinter import ttk
 import psycopg2
 
 # Create the main window
@@ -7,38 +7,34 @@ root = tk.Tk()
 root.title("Student Management System")
 root.config(bg="#2D3A45")
 
-# Get the screen width and height
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
 # Set the width and height of the form
-form_width = 300
-form_height = 150
-
-# Calculate the x and y coordinates for the form to be centered on the screen
-#x = (screen_width // 2) - (form_width // 2)
-#y = (screen_height // 2) - (form_height // 2)
+form_width = 800
+form_height = 600
 
 # Set the geometry of the form to be centered on the screen
-#root.geometry(f"{form_width}x{form_height}+{x}+{y}")
-root.geometry("800x600")
+root.geometry(f"{form_width}x{form_height}+100+100")
 
 # Create the form frame with a gray background
 form = tk.Frame(root, bg="#3A4750")
 form.place(relx=0.5, rely=0.5, anchor="center")
 
 # Create a label for the student ID
-id_label = tk.Label(form, text="Student ID:", anchor="w", bg="#3A4750",fg='white')
+id_label = tk.Label(form, text="Student ID:", anchor="w", bg="#3A4750", fg='white')
 id_label.grid(row=0, column=0)
 
 # Create an entry field for the student ID
 id_entry = tk.Entry(form)
 id_entry.grid(row=0, column=1)
 
-# Create a label to display the student details
-details_label = tk.Label(form, text="", bg="#3A4750")
-details_label.grid(row=1, column=0, columnspan=2)
-
+# Create a Treeview widget to display the student details
+details_tree = ttk.Treeview(form, columns=("Program", "Year", "Course", "Grade", "GPA"))
+details_tree.grid(row=1, column=0, columnspan=2)
+details_tree.heading("#0", text="Name")
+details_tree.heading("Program", text="Program")
+details_tree.heading("Year", text="Year")
+details_tree.heading("Course", text="Course")
+details_tree.heading("Grade", text="Grade")
+details_tree.heading("GPA", text="GPA")
 
 def show_details():
     # Get the student ID from the entry field
@@ -61,24 +57,29 @@ def show_details():
     student_data = cur.fetchone()
 
     if student_data is not None:
+        # Clear the existing data in the Treeview widget
+        details_tree.delete(*details_tree.get_children())
+
         # Create a string to display the student details
-        details_text = "Name: {}\nProgram: {} ({})\n\nCourses:".format(student_data[1], student_data[2], student_data[3])
+        name = student_data[1]
+        program = student_data[2]
+        year = student_data[3]
+        gpa = student_data[4]
+        details_tree.insert("", tk.END, text=name, values=(program, year, "", "", gpa))
 
         # Get all courses and grades for the student from the database
         cur.execute('SELECT * FROM grades WHERE id=%s', (student_id,))
         course_data = cur.fetchall()
 
         for course in course_data:
-            details_text += "\n{}: {}".format(course[1], course[2])
-
-        details_text += "\n\nGPA: {}".format(student_data[4])
-
-        # Update the label with the student details
-        details_label.config(text=details_text, anchor="w", bg="#3A4750", fg="white")
+            course_name = course[1]
+            grade = course[2]
+            details_tree.insert("", tk.END, text="", values=(program, year, course_name, grade, ""))
 
     else:
         # Show an error message if the student ID is not found in the database
-        details_label.config(text="Student ID not found", bg="#3A4750", fg="white")
+        details_tree.delete(*details_tree.get_children())
+        details_tree.insert("", tk.END, text="Student ID not found")
 
     # Close the cursor and connection
     cur.close()
